@@ -90,7 +90,7 @@ if (stored) {
 }
 startKeepAlive();
 
-const wss = new WebSocket.Server({ noServer: true });
+const wss = new WebSocket.Server({ server });
 const clients = new Set();
 
 async function subscribeToCapital(wsClient) {
@@ -169,11 +169,11 @@ const server = app.listen(port, () => {
   console.log(`🚀 Server running on ws://localhost:${port}`);
 });
 
-server.on('upgrade', (request, socket, head) => {
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request);
-  });
-});
+// server.on('upgrade', (request, socket, head) => {
+//   wss.handleUpgrade(request, socket, head, (ws) => {
+//     wss.emit('connection', ws, request);
+//   });
+// });
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'test.html'));
