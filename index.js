@@ -3,16 +3,19 @@ const axios = require('axios');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+app.use(cors());
+
+const port = process.env.PORT || 3000;
 
 const loginUrl = 'https://api-capital.backend-capital.com/api/v1/session';
 const credentials = {
-    identifier: 'dvlpr.saleh@gmail.com',
-    password: 'Cc-0537221210'
-};  
+    identifier: process.env.LOGIN_EMAIL || 'dvlpr.saleh@gmail.com',
+    password: process.env.LOGIN_PASSWORD || 'Cc-0537221210'
+  };  
 
 const TOKEN_FILE = path.join(__dirname, 'session.json');
 
@@ -39,7 +42,7 @@ async function getSessionTokens() {
     const response = await axios.post(loginUrl, credentials, {
       headers: {
         'Content-Type': 'application/json',
-        'X-CAP-API-KEY': process.env.API_KEY
+        'X-CAP-API-KEY': process.env.API_KEY || 'vQ5hjpmakUVD0N3N'
       }
     });
 
