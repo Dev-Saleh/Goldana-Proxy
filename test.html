@@ -12,7 +12,8 @@
         const priceDiv = document.getElementById('price');
         
         // Create WebSocket connection
-        const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket('wss://goldana-proxy.onrender.com');
+
         
         ws.onopen = () => {
             statusDiv.textContent = 'Connected to server';
