@@ -1,6 +1,6 @@
+const express = require('express');
 const WebSocket = require('ws');
 const axios = require('axios');
-const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -13,9 +13,9 @@ const port = process.env.PORT || 3000;
 
 const loginUrl = 'https://api-capital.backend-capital.com/api/v1/session';
 const credentials = {
-    identifier: process.env.LOGIN_EMAIL || 'dvlpr.saleh@gmail.com',
-    password: process.env.LOGIN_PASSWORD || 'Cc-0537221210'
-  };  
+  identifier: process.env.LOGIN_EMAIL || 'dvlpr.saleh@gmail.com',
+  password: process.env.LOGIN_PASSWORD || 'Cc-0537221210'
+};
 
 const TOKEN_FILE = path.join(__dirname, 'session.json');
 
@@ -60,7 +60,6 @@ async function getSessionTokens() {
   }
 }
 
-// 🔁 الحفاظ على الجلسة نشطة عبر API
 async function keepSessionAlive() {
   try {
     const { cst, securityToken } = currentTokens;
@@ -90,6 +89,12 @@ if (stored) {
 }
 startKeepAlive();
 
+// 🟢 إنشاء السيرفر HTTP أولاً
+const server = app.listen(port, () => {
+  console.log(`🚀 Server running on http://localhost:${port}`);
+});
+
+// 🔄 ثم تمرير السيرفر إلى WebSocket
 const wss = new WebSocket.Server({ server });
 const clients = new Set();
 
@@ -165,21 +170,10 @@ wss.on('connection', (ws) => {
   subscribeToCapital(ws);
 });
 
-const server = app.listen(port, () => {
-  console.log(`🚀 Server running on ws://localhost:${port}`);
-});
-
-// server.on('upgrade', (request, socket, head) => {
-//   wss.handleUpgrade(request, socket, head, (ws) => {
-//     wss.emit('connection', ws, request);
-//   });
-// });
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'test.html'));
 });
 
 app.get('/healthz', (req, res) => {
-    res.send('OK');
-  });
-  
+  res.send('OK');
+});
