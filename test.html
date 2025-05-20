@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gold Price Stream Test</title>
+</head>
+<body>
+    <h2>Gold Price Updates</h2>
+    <div id="status">Connecting...</div>
+    <div id="price"></div>
+    <script>
+        const statusDiv = document.getElementById('status');
+        const priceDiv = document.getElementById('price');
+        
+        // Create WebSocket connection
+        const ws = new WebSocket('ws://localhost:3000');
+        
+        ws.onopen = () => {
+            statusDiv.textContent = 'Connected to server';
+            statusDiv.style.color = 'green';
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            priceDiv.innerHTML = `
+                <p>Bid: ${data.bid}</p>
+                <p>Offer: ${data.offer}</p>
+                <p>Time: ${new Date(data.timestamp).toLocaleString()}</p>
+            `;
+        };
+        
+        ws.onerror = (error) => {
+            statusDiv.textContent = 'Error: ' + error.message;
+            statusDiv.style.color = 'red';
+        };
+        
+        ws.onclose = () => {
+            statusDiv.textContent = 'Disconnected from server';
+            statusDiv.style.color = 'red';
+        };
+    </script>
+</body>
+</html> 
