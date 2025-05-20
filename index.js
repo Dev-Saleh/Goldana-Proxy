@@ -1,6 +1,6 @@
-const express = require('express');
 const WebSocket = require('ws');
 const axios = require('axios');
+const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -18,12 +18,12 @@ const credentials = {
 };
 
 const TOKEN_FILE = path.join(__dirname, 'session.json');
-
 let currentTokens = {
   cst: null,
   securityToken: null
 };
 
+// ====== SESSION MANAGEMENT ======
 function saveTokensToFile(cst, securityToken) {
   fs.writeFileSync(TOKEN_FILE, JSON.stringify({ cst, securityToken }));
 }
@@ -80,7 +80,7 @@ function startKeepAlive() {
   setInterval(keepSessionAlive, 9 * 60 * 1000); // كل 9 دقائق
 }
 
-// تحميل التوكن عند بدء التشغيل
+// ====== LOAD TOKENS AT STARTUP ======
 const stored = loadTokensFromFile();
 if (stored) {
   currentTokens = stored;
@@ -89,15 +89,31 @@ if (stored) {
 }
 startKeepAlive();
 
-// 🟢 إنشاء السيرفر HTTP أولاً
-const server = app.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
+// ====== MAIN ROUTES ======
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test.html'));
 });
 
-// 🔄 ثم تمرير السيرفر إلى WebSocket
+app.get('/healthz', (req, res) => {
+  res.send('OK');
+});
+
+// ====== START SERVER ======
+const server = app.listen(port, () => {
+  console.log(`🚀 Server running on ws://localhost:${port}`);
+});
+
+// ====== WEBSOCKET SERVER ======
 const wss = new WebSocket.Server({ server });
 const clients = new Set();
 
+wss.on('connection', (ws) => {
+  console.log('🟢 New WebSocket client connected');
+  clients.add(ws);
+  subscribeToCapital(ws);
+});
+
+// ====== CAPITAL.COM WS STREAMING ======
 async function subscribeToCapital(wsClient) {
   let capitalWs;
 
@@ -163,17 +179,3 @@ async function subscribeToCapital(wsClient) {
 
   connect();
 }
-
-wss.on('connection', (ws) => {
-  console.log('🟢 New WebSocket client connected');
-  clients.add(ws);
-  subscribeToCapital(ws);
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'test.html'));
-});
-
-app.get('/healthz', (req, res) => {
-  res.send('OK');
-});
