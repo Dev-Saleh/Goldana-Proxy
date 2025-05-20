@@ -175,3 +175,8 @@ server.on('upgrade', (request, socket, head) => {
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'test.html'));
 });
+
+app.get('/healthz', (req, res) => {
+    res.send('OK');
+  });
+  
