@@ -125,14 +125,14 @@ async function subscribeToCapital(wsClient) {
       //   return;
       // }
   
-      // if (msg.destination === 'quote') {
+      if (msg.destination === 'quote') {
         const update = {
           bid: msg.payload.bid,
           offer: msg.payload.ofr,
           timestamp: msg.payload.timestamp
         };
         wsClient.send(JSON.stringify(update));
-      // }
+      }
     });
 
     capitalWs.on('close', () => {
