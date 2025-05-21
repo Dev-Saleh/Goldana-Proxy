@@ -19,23 +19,23 @@
             statusDiv.textContent = 'Connected to server';
             statusDiv.style.color = 'green';
         };
-        ws.onmessage = (event) => {
-          console.log("Raw message from server:", event.data);
-          const data = JSON.parse(event.data);
-          priceDiv.innerHTML = `
-          <p>Bid: ${data.bid}</p>
-          <p>Offer: ${data.offer}</p>
-          <p>Time: ${new Date(data.timestamp).toLocaleString()}</p>`;
-        };
-
         // ws.onmessage = (event) => {
-        //     const data = JSON.parse(event.data);
-        //     priceDiv.innerHTML = `
-        //         <p>Bid: ${data.bid}</p>
-        //         <p>Offer: ${data.offer}</p>
-        //         <p>Time: ${new Date(data.timestamp).toLocaleString()}</p>
-        //     `;
+        //   console.log("Raw message from server:", event.data);
+        //   const data = JSON.parse(event.data);
+        //   priceDiv.innerHTML = `
+        //   <p>Bid: ${data.bid}</p>
+        //   <p>Offer: ${data.offer}</p>
+        //   <p>Time: ${new Date(data.timestamp).toLocaleString()}</p>`;
         // };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            priceDiv.innerHTML = `
+                <p>Bid: ${data.bid}</p>
+                <p>Offer: ${data.offer}</p>
+                <p>Time: ${new Date(data.timestamp).toLocaleString()}</p>
+            `;
+        };
         
         ws.onerror = (error) => {
             statusDiv.textContent = 'Error: ' + error.message;
