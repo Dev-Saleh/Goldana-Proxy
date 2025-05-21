@@ -82,20 +82,20 @@ function startKeepAlive() {
 }
 
 // --- WebSocket Events ---
-// wss.on('connection', (wsClient) => {
-//   console.log('🟢 Client connected');
-//   subscribeToCapital(wsClient);
-// });
 wss.on('connection', (wsClient) => {
-  console.log('✅ Client connected');
-  
-  // أرسل بيانات مباشرة بعد الاتصال للتجربة
-  wsClient.send(JSON.stringify({
-    bid: 250.35,
-    offer: 250.60,
-    timestamp: Date.now()
-  }));
+  console.log('🟢 Client connected');
+  subscribeToCapital(wsClient);
 });
+// wss.on('connection', (wsClient) => {
+//   console.log('✅ Client connected');
+  
+//   // أرسل بيانات مباشرة بعد الاتصال للتجربة
+//   wsClient.send(JSON.stringify({
+//     bid: 250.35,
+//     offer: 250.60,
+//     timestamp: Date.now()
+//   }));
+// });
 
 async function subscribeToCapital(wsClient) {
   let capitalWs;
@@ -120,19 +120,19 @@ async function subscribeToCapital(wsClient) {
 
     capitalWs.on('message', (data) => {
       const msg = JSON.parse(data);
-      if (msg.status === 'ERROR' && msg.errorCode === 'unauthorized') {
-        getSessionTokens().then(connect);
-        return;
-      }
+      // if (msg.status === 'ERROR' && msg.errorCode === 'unauthorized') {
+      //   getSessionTokens().then(connect);
+      //   return;
+      // }
   
-      if (msg.destination === 'quote') {
+      // if (msg.destination === 'quote') {
         const update = {
           bid: msg.payload.bid,
           offer: msg.payload.ofr,
           timestamp: msg.payload.timestamp
         };
         wsClient.send(JSON.stringify(update));
-      }
+      // }
     });
 
     capitalWs.on('close', () => {
