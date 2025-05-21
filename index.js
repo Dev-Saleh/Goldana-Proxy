@@ -1,6 +1,7 @@
+const express = require('express');
+const http = require('http');
 const WebSocket = require('ws');
 const axios = require('axios');
-const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -10,20 +11,24 @@ const app = express();
 app.use(cors());
 
 const port = process.env.PORT || 3000;
+const server = http.createServer(app); // هذا مهم
 
+const wss = new WebSocket.Server({ server }); // نربطه بنفس السيرفر
+
+// --- إعدادات Capital.com ---
 const loginUrl = 'https://api-capital.backend-capital.com/api/v1/session';
-const credentials = {
-  identifier: process.env.LOGIN_EMAIL || 'dvlpr.saleh@gmail.com',
-  password: process.env.LOGIN_PASSWORD || 'Cc-0537221210'
-};
-
 const TOKEN_FILE = path.join(__dirname, 'session.json');
+
 let currentTokens = {
   cst: null,
   securityToken: null
 };
 
-// ====== SESSION MANAGEMENT ======
+const credentials = {
+  identifier: process.env.LOGIN_EMAIL || 'dvlpr.saleh@gmail.com',
+  password: process.env.LOGIN_PASSWORD || 'Cc-0537221210'
+};
+
 function saveTokensToFile(cst, securityToken) {
   fs.writeFileSync(TOKEN_FILE, JSON.stringify({ cst, securityToken }));
 }
@@ -31,8 +36,7 @@ function saveTokensToFile(cst, securityToken) {
 function loadTokensFromFile() {
   if (fs.existsSync(TOKEN_FILE)) {
     const data = fs.readFileSync(TOKEN_FILE);
-    const { cst, securityToken } = JSON.parse(data);
-    return { cst, securityToken };
+    return JSON.parse(data);
   }
   return null;
 }
@@ -49,14 +53,11 @@ async function getSessionTokens() {
     const cst = response.headers['cst'];
     const securityToken = response.headers['x-security-token'];
 
-    saveTokensToFile(cst, securityToken);
     currentTokens = { cst, securityToken };
-
+    saveTokensToFile(cst, securityToken);
     console.log('✅ Session tokens refreshed');
-    return currentTokens;
   } catch (error) {
-    console.error('❌ فشل تسجيل الدخول:', error.response?.data || error.message);
-    throw error;
+    console.error('❌ Login failed:', error.response?.data || error.message);
   }
 }
 
@@ -69,62 +70,32 @@ async function keepSessionAlive() {
         'X-SECURITY-TOKEN': securityToken
       }
     });
-    console.log('🔁 Session ping successful');
+    console.log('🔁 Session is alive');
   } catch (error) {
-    console.error('⚠️ Session expired. Recreating...');
+    console.log('⚠️ Session expired, refreshing...');
     await getSessionTokens();
   }
 }
 
 function startKeepAlive() {
-  setInterval(keepSessionAlive, 9 * 60 * 1000); // كل 9 دقائق
+  setInterval(keepSessionAlive, 9 * 60 * 1000);
 }
 
-// ====== LOAD TOKENS AT STARTUP ======
-const stored = loadTokensFromFile();
-if (stored) {
-  currentTokens = stored;
-} else {
-  getSessionTokens();
-}
-startKeepAlive();
-
-// ====== MAIN ROUTES ======
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'test.html'));
+// --- WebSocket Events ---
+wss.on('connection', (wsClient) => {
+  console.log('🟢 Client connected');
+  subscribeToCapital(wsClient);
 });
 
-app.get('/healthz', (req, res) => {
-  res.send('OK');
-});
-
-// ====== START SERVER ======
-const server = app.listen(port, () => {
-  console.log(`🚀 Server running on ws://localhost:${port}`);
-});
-
-// ====== WEBSOCKET SERVER ======
-const wss = new WebSocket.Server({ server });
-const clients = new Set();
-
-wss.on('connection', (ws) => {
-  console.log('🟢 New WebSocket client connected');
-  clients.add(ws);
-  subscribeToCapital(ws);
-});
-
-// ====== CAPITAL.COM WS STREAMING ======
 async function subscribeToCapital(wsClient) {
   let capitalWs;
 
-  async function connect() {
+  const connect = async () => {
     const { cst, securityToken } = currentTokens;
-
     capitalWs = new WebSocket('wss://api-streaming-capital.backend-capital.com/connect');
 
     capitalWs.on('open', () => {
-      console.log('✅ Connected to Capital.com WebSocket');
-
+      console.log('📡 Connected to Capital.com WebSocket');
       const subscribeMessage = {
         destination: 'marketData.subscribe',
         correlationId: '100',
@@ -134,48 +105,57 @@ async function subscribeToCapital(wsClient) {
           epics: ['GOLD']
         }
       };
-
       capitalWs.send(JSON.stringify(subscribeMessage));
-      console.log('📨 Sent subscription request for GOLD');
     });
 
-    capitalWs.on('message', async (data) => {
+    capitalWs.on('message', (data) => {
       const msg = JSON.parse(data);
-
       if (msg.status === 'ERROR' && msg.errorCode === 'unauthorized') {
-        console.log('⚠️ Token expired. Logging in again...');
-        await getSessionTokens();
-        capitalWs.terminate();
-        connect();
+        getSessionTokens().then(connect);
         return;
       }
 
       if (msg.destination === 'quote') {
-        const priceUpdate = {
+        const update = {
           bid: msg.payload.bid,
           offer: msg.payload.ofr,
           timestamp: msg.payload.timestamp
         };
-        wsClient.send(JSON.stringify(priceUpdate));
+        wsClient.send(JSON.stringify(update));
       }
     });
 
-    capitalWs.on('error', (err) => {
-      console.error('❌ WebSocket error:', err.message);
-    });
-
     capitalWs.on('close', () => {
-      console.log('🚪 WebSocket closed');
+      console.log('❌ Capital WebSocket closed');
     });
 
     wsClient.on('close', () => {
       console.log('❎ Client disconnected');
-      clients.delete(wsClient);
-      if (capitalWs.readyState === WebSocket.OPEN) {
-        capitalWs.close();
-      }
+      capitalWs.close();
     });
-  }
+  };
 
   connect();
 }
+
+// --- Routes ---
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test.html'));
+});
+
+app.get('/healthz', (req, res) => {
+  res.send('OK');
+});
+
+// --- Start Server ---
+const storedTokens = loadTokensFromFile();
+if (storedTokens) {
+  currentTokens = storedTokens;
+} else {
+  getSessionTokens();
+}
+startKeepAlive();
+
+server.listen(port, () => {
+  console.log(`🚀 Server running at http://localhost:${port}`);
+});
