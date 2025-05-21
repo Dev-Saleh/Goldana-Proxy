@@ -82,9 +82,19 @@ function startKeepAlive() {
 }
 
 // --- WebSocket Events ---
+// wss.on('connection', (wsClient) => {
+//   console.log('🟢 Client connected');
+//   subscribeToCapital(wsClient);
+// });
 wss.on('connection', (wsClient) => {
-  console.log('🟢 Client connected');
-  subscribeToCapital(wsClient);
+  console.log('✅ Client connected');
+  
+  // أرسل بيانات مباشرة بعد الاتصال للتجربة
+  wsClient.send(JSON.stringify({
+    bid: 250.35,
+    offer: 250.60,
+    timestamp: Date.now()
+  }));
 });
 
 async function subscribeToCapital(wsClient) {
@@ -114,7 +124,7 @@ async function subscribeToCapital(wsClient) {
         getSessionTokens().then(connect);
         return;
       }
-
+  
       if (msg.destination === 'quote') {
         const update = {
           bid: msg.payload.bid,
